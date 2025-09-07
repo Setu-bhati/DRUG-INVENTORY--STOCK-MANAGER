@@ -1,0 +1,5 @@
+git init
+git remote add origin https://github.com/Setu-bhati/DRUG-INVENTORY--STOCK-MANAGER.git
+git add .
+git commit -m "Initial commit"
+git push -u origin main

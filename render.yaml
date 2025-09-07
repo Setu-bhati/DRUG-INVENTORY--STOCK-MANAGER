@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: server-backed-website
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
