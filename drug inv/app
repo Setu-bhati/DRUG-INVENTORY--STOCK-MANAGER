@@ -1,0 +1,135 @@
+// app.js
+const API = location.origin + '/api';
+let token = localStorage.getItem('token');
+
+const authScreen = document.getElementById('auth-screen');
+const dashboard = document.getElementById('dashboard');
+const userArea = document.getElementById('user-area');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const btnLogin = document.getElementById('btn-login');
+const expiryList = document.getElementById('expiry-list');
+const drugsTableBody = document.querySelector('#drugs-table tbody');
+const stockSummary = document.getElementById('stock-summary');
+
+function setLoggedIn(user, tkn) {
+  token = tkn;
+  localStorage.setItem('token', token);
+  authScreen.style.display = 'none';
+  dashboard.style.display = '';
+  userArea.innerHTML = `<span>Hi ${user.name||user.email}</span> <button id="logout">Logout</button>`;
+  document.getElementById('logout').onclick = () => {
+    localStorage.removeItem('token'); token = null;
+    location.reload();
+  };
+  fetchAll();
+}
+
+btnLogin.addEventListener('click', async () => {
+  try {
+    const res = await fetch(API + '/auth/login', {
+      method: 'POST',
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email: emailInput.value, password: passwordInput.value })
+    });
+    const j = await res.json();
+    if (!res.ok) return alert(j.error || 'Login failed');
+    setLoggedIn(j.user, j.token);
+  } catch (e) { alert(e.message); }
+});
+
+async function fetchAll() {
+  await fetchExpiry();
+  await fetchDrugs();
+  await fetchSummary();
+}
+
+async function fetchExpiry(days = 30) {
+  const r = await fetch(API + '/alerts/expiring?days=' + days, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await r.json();
+  expiryList.innerHTML = data.map(d => `<li>${d.name} — ${d.quantity} pcs — expires in ${d.days_left} day(s) (${d.expiry_date})</li>`).join('') || '<li>No expiring items</li>';
+}
+
+async function fetchDrugs() {
+  const r = await fetch(API + '/drugs', { headers: { Authorization: `Bearer ${token}` }});
+  const arr = await r.json();
+  drugsTableBody.innerHTML = arr.map(d => `
+    <tr>
+      <td>${d.name}</td>
+      <td>${d.batch||''}</td>
+      <td>${d.quantity}</td>
+      <td>${d.expiry_date || ''}</td>
+      <td>
+        <button class="btn-in" data-id="${d.id}">In</button>
+        <button class="btn-out" data-id="${d.id}">Out</button>
+        <button class="btn-edit" data-id="${d.id}">Edit</button>
+      </td>
+    </tr>`).join('');
+  document.querySelectorAll('.btn-in').forEach(b => b.onclick = onIn);
+  document.querySelectorAll('.btn-out').forEach(b => b.onclick = onOut);
+  document.querySelectorAll('.btn-edit').forEach(b => b.onclick = onEdit);
+}
+
+async function fetchSummary() {
+  const r = await fetch(API + '/reports/stock', { headers: { Authorization: `Bearer ${token}` }});
+  const j = await r.json();
+  stockSummary.innerHTML = `Total items: ${j.total_items} — Lowest stock: ${j.items && j.items.length ? j.items[0].name + ' ('+j.items[0].quantity+')' : '-'}`;
+}
+
+// simple stock in
+async function onIn(e) {
+  const id = e.target.dataset.id;
+  const qty = prompt('Quantity to add?');
+  if (!qty) return;
+  const r = await fetch(API + `/drugs/${id}/in`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ quantity: parseInt(qty), note: 'Manual IN' })
+  });
+  if (!r.ok) alert((await r.json()).error || 'Error');
+  else fetchAll();
+}
+
+// simple stock out
+async function onOut(e) {
+  const id = e.target.dataset.id;
+  const qty = prompt('Quantity to remove?');
+  if (!qty) return;
+  const r = await fetch(API + `/drugs/${id}/out`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ quantity: parseInt(qty), note: 'Manual OUT' })
+  });
+  if (!r.ok) alert((await r.json()).error || 'Error');
+  else fetchAll();
+}
+
+async function onEdit(e) {
+  const id = e.target.dataset.id;
+  const r = await fetch(API + '/drugs/' + id, { headers: { Authorization: `Bearer ${token}` }});
+  const d = await r.json();
+  const newName = prompt('Name', d.name);
+  if (newName === null) return;
+  const newQty = prompt('Quantity', d.quantity);
+  // update
+  await fetch(API + '/drugs/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ name: newName, batch: d.batch, unit: d.unit, price: d.price, expiry_date: d.expiry_date, notes: d.notes })
+  });
+  alert('Updated');
+  fetchAll();
+}
+
+// if token exists, try to fetch profile via token decode (no endpoint)
+if (token) {
+  // naive decode user from token payload (no verification)
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    setLoggedIn(payload, token);
+  } catch(e) {
+    localStorage.removeItem('token');
+  }
+}
