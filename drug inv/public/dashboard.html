@@ -1,0 +1,64 @@
+<h2>Dashboard</h2>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Drug Inventory — Dashboard</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="topbar">
+      <h1>Drug Inventory</h1>
+      <div id="user-area"></div>
+    </header>
+
+    <section id="auth-screen" class="card">
+      <h2>Login</h2>
+      <input id="email" placeholder="Email" />
+      <input id="password" placeholder="Password" type="password" />
+      <button id="btn-login">Login</button>
+      <p>or <a id="show-register" href="#">Register</a></p>
+    </section>
+
+    <section id="dashboard" style="display:none;">
+      <div class="row">
+        <div class="card col">
+          <h3>Expiry Alerts (next 30 days)</h3>
+          <ul id="expiry-list"></ul>
+        </div>
+        <div class="card col">
+          <h3>Stock Summary</h3>
+          <div id="stock-summary"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Drugs</h3>
+        <button id="btn-add">Add new drug</button>
+        <table id="drugs-table">
+          <thead><tr><th>Name</th><th>Batch</th><th>Qty</th><th>Expiry</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- simple modal for add/in/out -->
+    <div id="modal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3 id="modal-title"></h3>
+        <div id="modal-body"></div>
+        <div class="modal-actions">
+          <button id="modal-close">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="foot">© Drug Inventory</footer>
+  </main>
+
+<script src="/app.js"></script>
+</body>
+</html>
+<a href="/logout">Logout</a>
